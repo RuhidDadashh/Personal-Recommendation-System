@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Movie Recommendation System</title>
+    <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="main-header">
+            <h1 class="main-title">🎬 Movie Recommendations</h1>
+            <div class="user-info">
+                <span class="user-name">Welcome, <span id="currentUser">User</span>!</span>
+                <button class="btn-logout" onclick="MovieApp.logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="movies-section">
+            <h2 class="section-title">Select Your Favorite Movies (Choose up to 4)</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 20px;">
+                Search and click on movies you've enjoyed to get personalized recommendations
+            </p>
+            
+            <!-- Search will be inserted here by JavaScript -->
+            
+            <!-- Algorithm Selection -->
+            <div style="text-align: center; margin-bottom: 30px;">
+                <label style="margin-right: 15px; color: #333; font-weight: 500;">Recommendation Algorithm:</label>
+                <select id="algorithmSelect" onchange="changeAlgorithm()" style="padding: 8px 12px; border: 2px solid #e1e1e1; border-radius: 5px; background: white;">
+                    <option value="hybrid">Hybrid (Recommended)</option>
+                    <option value="content_based">Content-Based</option>
+                    <option value="collaborative">Collaborative Filtering</option>
+                </select>
+            </div>
+            
+            <div class="movies-grid" id="moviesGrid">
+                <!-- Movies will be populated from MovieLens database -->
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">🎬</div>
+                    <p>Loading movies from database...</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <div id="selectionInfo" style="margin-bottom: 15px; color: #666;">
+                    Select movies to get recommendations
+                </div>
+                <button class="btn btn-recommend" id="getRecommendationsBtn" onclick="getRecommendations()">
+                    Get My Recommendations
+                </button>
+            </div>
+        </div>
+
+        <div class="recommendations-section hidden" id="recommendationsSection">
+            <h2 class="section-title">🌟 Recommended For You</h2>
+            <div id="recommendationInfo" style="text-align: center; margin-bottom: 25px; color: #666;">
+                <!-- Algorithm info will be displayed here -->
+            </div>
+            <div class="recommendations-grid" id="recommendationsGrid">
+                <!-- Recommendations will be populated by JavaScript -->
+            </div>
+            
+            <!-- Feedback Section -->
+            <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f8f9ff; border-radius: 10px;">
+                <h3 style="color: #333; margin-bottom: 15px;">How did we do?</h3>
+                <p style="color: #666; margin-bottom: 20px;">Your feedback helps us improve our recommendations</p>
+                <div id="feedbackButtons" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="provideFeedback('excellent')" class="btn" style="background: #2ed573; color: white;">😍 Excellent</button>
+                    <button onclick="provideFeedback('good')" class="btn" style="background: #ffa502; color: white;">😊 Good</button>
+                    <button onclick="provideFeedback('okay')" class="btn" style="background: #ff6b6b; color: white;">😐 Okay</button>
+                    <button onclick="provideFeedback('poor')" class="btn" style="background: #ff4757; color: white;">😞 Poor</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Statistics Section -->
+        <div id="statsSection" class="hidden" style="margin-top: 40px; padding: 40px; border-top: 2px solid #e1e1e1;">
+            <h2 class="section-title">📊 Your Movie Stats</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3 style="margin-bottom: 10px;">Movies Selected</h3>
+                    <p id="selectedCount" style="font-size: 2rem; font-weight: bold;">0</p>
+                </div>
+                <div style="background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3 style="margin-bottom: 10px;">Recommendations</h3>
+                    <p id="recommendationCount" style="font-size: 2rem; font-weight: bold;">0</p>
+                </div>
+                <div style="background: linear-gradient(45deg, #2ed573, #17a085); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3 style="margin-bottom: 10px;">Diversity Score</h3>
+                    <p id="diversityScore" style="font-size: 2rem; font-weight: bold;">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../static/js/main.js"></script>
+    <script src="../static/js/recommendations.js"></script>
+    <script>
+        let recommendationUI;
+        
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication
+            if (!MovieApp.checkAuth()) {
+                return;
+            }
+            
+            // Initialize recommendation system
+            recommendationUI = RecommendationSystem.initRecommendationSystem(movies);
+            
+            // Initialize the main app
+            MovieApp.init();
+            
+            // Show stats section
+            document.getElementById('statsSection').classList.remove('hidden');
+        });
+        
+        // Enhanced recommendation function
+        async function getRecommendations() {
+            if (selectedMovies.length === 0) {
+                MovieApp.showAlert('Please select at least one movie!', 'error');
+                return;
+            }
+
+            // Show loading state
+            const btn = document.getElementById('getRecommendationsBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Getting Recommendations...';
+            btn.disabled = true;
+
+            try {
+                // Get recommendations using the recommendation engine
+                const result = await recommendationUI.getRecommendations(selectedMovies);
+                
+                if (result.success) {
+                    displayEnhancedRecommendations(result);
+                    updateStats(result);
+                } else {
+                    MovieApp.showAlert('Error getting recommendations: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                MovieApp.showAlert('An error occurred. Please try again.', 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        // Display enhanced recommendations
+        function displayEnhancedRecommendations(result) {
+            const section = document.getElementById('recommendationsSection');
+            const grid = document.getElementById('recommendationsGrid');
+            const info = document.getElementById('recommendationInfo');
+            
+            // Update algorithm info
+            info.innerHTML = `
+                <p>Using <strong>${result.algorithm}</strong> algorithm | 
+                Diversity Score: <strong>${(result.diversity * 100).toFixed(1)}%</strong></p>
+            `;
+            
+            grid.innerHTML = '';
+            
+            result.recommendations.forEach((rec, index) => {
+                const card = document.createElement('div');
+                card.className = 'recommendation-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.innerHTML = `
+                    <div style="font-size: 2rem; margin-bottom: 10px;">🎭</div>
+                    <h3 style="margin-bottom: 8px; color: #333;">${rec.title}</h3>
+                    <p style="color: #666; margin-bottom: 5px; font-size: 0.9rem;">${rec.genre}</p>
+                    <p style="color: #ff6b6b; font-weight: bold; margin-bottom: 8px;">★ ${rec.rating}</p>
+                    <p style="color: #888; font-size: 0.8rem; font-style: italic;">${rec.reason || 'Great choice for you!'}</p>
+                `;
+                grid.appendChild(card);
+            });
+
+            section.classList.remove('hidden');
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Update statistics
+        function updateStats(result) {
+            document.getElementById('selectedCount').textContent = selectedMovies.length;
+            document.getElementById('recommendationCount').textContent = result.recommendations.length;
+            document.getElementById('diversityScore').textContent = (result.diversity * 100).toFixed(1) + '%';
+            
+            const selectionInfo = document.getElementById('selectionInfo');
+            selectionInfo.textContent = `${selectedMovies.length}/4 movies selected`;
+        }
+        
+        // Change recommendation algorithm
+        function changeAlgorithm() {
+            const select = document.getElementById('algorithmSelect');
+            const algorithm = select.value;
+            
+            if (recommendationUI && recommendationUI.setAlgorithm(algorithm)) {
+                MovieApp.showAlert(`Switched to ${algorithm} algorithm`, 'success');
+                
+                // Hide previous recommendations
+                const section = document.getElementById('recommendationsSection');
+                section.classList.add('hidden');
+            }
+        }
+        
+        // Provide feedback
+        function provideFeedback(rating) {
+            if (recommendationUI) {
+                const ratingMap = {
+                    'excellent': 5,
+                    'good': 4,
+                    'okay': 3,
+                    'poor': 1
+                };
+                
+                // For demo, we'll provide feedback for the first recommendation
+                const firstRec = document.querySelector('.recommendation-card h3');
+                if (firstRec) {
+                    recommendationUI.provideFeedback(firstRec.textContent, ratingMap[rating]);
+                    MovieApp.showAlert('Thank you for your feedback!', 'success');
+                    
+                    // Hide feedback buttons
+                    document.getElementById('feedbackButtons').style.display = 'none';
+                }
+            }
+        }
+        
+        // Override the original selectMovie function with enhanced version
+        function selectMovie(movieId, cardElement) {
+            if (selectedMovies.includes(movieId)) {
+                // Deselect movie
+                selectedMovies = selectedMovies.filter(id => id !== movieId);
+                cardElement.classList.remove('selected');
+            } else if (selectedMovies.length < 4) {
+                // Select movie
+                selectedMovies.push(movieId);
+                cardElement.classList.add('selected');
+            } else {
+                MovieApp.showAlert('You can select up to 4 movies only!', 'error');
+                return;
+            }
+            
+            // Update selection info
+            const selectionInfo = document.getElementById('selectionInfo');
+            selectionInfo.textContent = `${selectedMovies.length}/4 movies selected`;
+            
+            // Update stats
+            document.getElementById('selectedCount').textContent = selectedMovies.length;
+            
+            // Update button text
+            const btn = document.getElementById('getRecommendationsBtn');
+            if (selectedMovies.length > 0) {
+                btn.textContent = `Get Recommendations (${selectedMovies.length} selected)`;
+            } else {
+                btn.textContent = 'Get My Recommendations';
+            }
+        }
+        
+        // Make selectMovie available globally
+        window.selectMovie = selectMovie;
+    </script>
+</body>
+</html>

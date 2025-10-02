@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Movie Recommendation System</title>
+    <link rel="stylesheet" href="../static/css/style.css">
+    <link rel="stylesheet" href="../static/css/auth.css">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="auth-left">
+            <div>
+                <h1 class="auth-title">Join Us!</h1>
+                <p class="auth-subtitle">Create your account and start discovering amazing movies tailored just for you</p>
+            </div>
+        </div>
+        <div class="auth-right">
+            <h2 class="form-title">Create Account</h2>
+            
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        class="form-control" 
+                        required 
+                        placeholder="Enter your full name"
+                        autocomplete="name"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-control" 
+                        required 
+                        placeholder="Enter your email"
+                        autocomplete="email"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div style="position: relative;">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-control" 
+                            required 
+                            placeholder="Create a password (min 6 characters)"
+                            autocomplete="new-password"
+                        >
+                        <button 
+                            type="button" 
+                            onclick="AuthApp.togglePassword('password')"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;"
+                        >👁️‍🗨️</button>
+                    </div>
+                    <div id="passwordStrength" class="password-strength" style="margin-top: 5px; font-size: 0.8rem;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" required style="margin-right: 8px;">
+                        I agree to the <a href="#" style="color: #667eea;">Terms of Service</a> and <a href="#" style="color: #667eea;">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    Create Account
+                </button>
+            </form>
+            
+            <div class="auth-link">
+                <p>Already have an account? <a href="login.html">Sign in here</a></p>
+                <p><a href="index.html">← Back to Home</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../static/js/auth.js"></script>
+    <script>
+        // Add password strength indicator
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.getElementById('password');
+            const strengthDiv = document.getElementById('passwordStrength');
+            
+            passwordInput.addEventListener('input', function() {
+                const password = this.value;
+                if (password.length === 0) {
+                    strengthDiv.innerHTML = '';
+                    return;
+                }
+                
+                const strength = AuthApp.checkPasswordStrength(password);
+                const colors = {
+                    weak: '#ff4757',
+                    medium: '#ffa502',
+                    strong: '#2ed573'
+                };
+                
+                strengthDiv.innerHTML = `
+                    <div style="color: ${colors[strength.level]}; font-weight: 500;">
+                        Password strength: ${strength.level.toUpperCase()}
+                    </div>
+                `;
+                
+                if (strength.feedback.length > 0) {
+                    strengthDiv.innerHTML += `
+                        <div style="color: #666; font-size: 0.7rem; margin-top: 2px;">
+                            ${strength.feedback.slice(0, 2).join(', ')}
+                        </div>
+                    `;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
